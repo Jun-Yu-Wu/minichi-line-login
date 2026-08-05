@@ -1,0 +1,115 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ink: var(--ink);
+  --color-blue: var(--blue);
+  --color-sky: var(--sky);
+  --color-cyan: var(--cyan);
+  --color-ice: var(--ice);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-sans-family);
+  --font-display: var(--font-display-family);
+  --font-mono: var(--font-mono-family);
+}
+
+:root {
+  --radius: 1rem;
+  --ink: #133c55;
+  --blue: #386fa4;
+  --sky: #59a5d8;
+  --cyan: #84d2f6;
+  --ice: #91e5f6;
+  --background: var(--ice);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--cyan);
+  --secondary-foreground: var(--ink);
+  --muted: #f2fbfe;
+  --muted-foreground: var(--blue);
+  --accent: var(--sky);
+  --accent-foreground: var(--ink);
+  --destructive: #a44252;
+  --border: var(--cyan);
+  --input: var(--cyan);
+  --ring: var(--sky);
+  --font-sans-family: "Noto Sans TC", "PingFang TC", ui-sans-serif, system-ui, sans-serif;
+  --font-display-family: "Noto Serif TC", "Songti TC", Georgia, serif;
+  --font-mono-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth bg-background;
+  }
+
+  body {
+    @apply min-h-svh bg-background font-sans text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at 92% -4%, var(--cyan) 0, transparent 31rem),
+      radial-gradient(circle at -8% 88%, var(--sky) 0, transparent 28rem),
+      linear-gradient(135deg, var(--ice) 0%, #ffffff 58%, var(--cyan) 125%);
+    background-attachment: fixed;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--sky);
+    color: var(--ink);
+  }
+}
+
+@layer components {
+  .display-type {
+    font-family: var(--font-display);
+  }
+
+  .page-enter {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter {
+    animation: page-in 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
