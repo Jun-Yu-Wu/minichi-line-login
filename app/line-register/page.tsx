@@ -18,6 +18,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_alias: "請先填寫 1–20 字的 LINE 社群名稱，再點擊登入。",
   login_start_failed: "目前無法進行 LINE 登入，請稍後再試。",
   not_configured: "LINE 登入服務尚未開放。",
+  purchase_notice_required: "請先閱讀並同意購前說明，再前往 LINE 登入。",
   request_too_large: "送出的資料過大，請重新填寫。",
 };
 

@@ -12,6 +12,9 @@ export async function POST(request: NextRequest) {
   }
   try {
     const form = await request.formData();
+    if (form.get("purchaseNoticeAccepted") !== "accepted") {
+      return redirectToRegister(request, "purchase_notice_required");
+    }
     const oauthConfig = config.lineLoginWebConfig();
     const transaction = oauthModule.createAuthorizationTransaction({
       claimedAlias: form.get("claimedAlias"),

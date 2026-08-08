@@ -24,20 +24,26 @@
 
 ## 實際流程
 
-1. 客人在 `/line-register` 填寫社群名稱。
-2. 服務建立短期、加密的 OAuth transaction cookie，導向 LINE Login。
-3. LINE callback 回來後，服務交換 authorization code，並向 LINE 官方 verify endpoint 驗證 ID token、issuer、audience、expiry 與 nonce。
-4. 驗證成功後，RPC 只用客人輸入的社群暱稱比對目前有效的 `line_community_name`；LINE display name 不參與比對。
-5. 無同名時，RPC 同交易建立顧客、唯一 current community alias、active LINE identity，並回傳 `bound`／`auto_approved`。
-6. 撞名時建立 `pending` 申請；同一個 LINE subject 的未過期申請會被重用，管理員在 `minichi_admin_system/identity-bindings` 處理。
-7. 後續自動結帳訊息流程以已綁定的 active LINE identity 為基礎實作。
+1. 客人在 `/line-register` 填寫社群名稱，點擊「閱讀購前說明並繼續」。
+2. 公開頁開啟可滾動的購前說明；滑到內容最底部後，才可勾選同意，再點擊「同意並前往 LINE」。
+3. 服務確認表單帶有購前說明同意值後，建立短期、加密的 OAuth transaction cookie，導向 LINE Login。
+4. LINE callback 回來後，服務交換 authorization code，並向 LINE 官方 verify endpoint 驗證 ID token、issuer、audience、expiry 與 nonce。
+5. 驗證成功後，RPC 只用客人輸入的社群暱稱比對目前有效的 `line_community_name`；LINE display name 不參與比對。
+6. 無同名時，RPC 同交易建立顧客、唯一 current community alias、active LINE identity，並回傳 `bound`／`auto_approved`。
+7. 撞名時建立 `pending` 申請；同一個 LINE subject 的未過期申請會被重用，管理員在 `minichi_admin_system/identity-bindings` 處理。
+8. 後續自動結帳訊息流程以已綁定的 active LINE identity 為基礎實作。
+
+綁定成功後，資料庫 trigger 會在同一個 transaction 寫入
+`integration.line_binding_admin_email_outbox`；公開 LINE Login 服務不持有 Email
+provider secret，也不等待 Email 發送完成。Supabase Edge Function 會另外領取
+outbox，寄送一封通知到管理員 Gmail，並記錄重試／失敗狀態。待審核申請不寄 Email。
 
 ## Route
 
 | Route | 用途 |
 | --- | --- |
 | `/` | 導向 `/line-register` |
-| `/line-register` | 客人填寫社群名稱並開始 LINE Login |
+| `/line-register` | 客人閱讀購前說明、填寫社群名稱並開始 LINE Login |
 | `/line-register/result` | 顯示已綁定、待審核或錯誤結果 |
 | `POST /api/line-login/start` | 建立 OAuth transaction 並導向 LINE |
 | `GET /api/line-login/callback` | 處理 LINE callback 並依社群暱稱結果自動綁定或建立待審核申請 |
