@@ -1,17 +1,14 @@
 import Link from "next/link";
-import { Check, CircleAlert, Clock3, RotateCcw } from "lucide-react";
+import { ArrowRight, CircleAlert, Clock3, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+import BindingMessage from "./BindingMessage";
 
 export const dynamic = "force-dynamic";
 
 const RESULTS = {
-  bound: {
-    description: "LINE 已完成綁定",
-    icon: Check,
-    title: "綁定成功",
-    tone: "bg-cyan text-ink",
-  },
   pending: {
     description: "申請已送出，等待管理員確認",
     icon: Clock3,
@@ -35,6 +32,33 @@ export default async function LineRegisterResultPage({ searchParams }: {
   searchParams: Promise<{ result?: string }>;
 }) {
   const { result = "callback_failed" } = await searchParams;
+
+  if (result === "bound") {
+    const chatUrl = `https://line.me/R/oaMessage/${encodeURIComponent("@903jhmgb")}/?${encodeURIComponent("已完成綁定")}`;
+
+    return (
+      <main className="page-enter flex min-h-svh items-center justify-center bg-white px-4 py-8 sm:px-6 sm:py-12">
+        <Card className="w-full max-w-[26rem] gap-0 rounded-[1.625rem] border-[#eaeaea] bg-white px-5 pb-6 pt-11 text-left shadow-[0_12px_36px_#00000008] sm:px-8 sm:pb-8 sm:pt-14">
+          <h1 className="flex items-center gap-3 text-[29px] font-semibold leading-[1.34] tracking-[-0.035em] text-[#202020] sm:text-[32px]">
+            <CircleAlert className="size-8 shrink-0 stroke-[1.75] sm:size-9" aria-hidden="true" />
+            <span>最後一步</span>
+          </h1>
+          <p className="mb-8 mt-5 text-base leading-[1.8] text-[#646464]">
+            複製以下文字，<br />
+            傳送到官方 LINE 聊天室。
+          </p>
+          <BindingMessage />
+          <Button asChild className="mt-12 h-auto min-h-14 w-full justify-between rounded-xl bg-[#202020] px-4 py-4 text-[15px] text-white shadow-none hover:bg-[#333333] focus-visible:ring-neutral-400 sm:mt-16 sm:px-5 sm:text-base [&_svg]:size-5">
+            <a href={chatUrl}>
+              打開官方 LINE 聊天室
+              <ArrowRight aria-hidden="true" />
+            </a>
+          </Button>
+        </Card>
+      </main>
+    );
+  }
+
   const success = RESULTS[result as keyof typeof RESULTS];
   const Icon = success?.icon || CircleAlert;
 

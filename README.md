@@ -31,7 +31,8 @@
 5. 驗證成功後，RPC 只用客人輸入的社群暱稱比對目前有效的 `line_community_name`；LINE display name 不參與比對。
 6. 無同名時，RPC 同交易建立顧客、唯一 current community alias、active LINE identity，並回傳 `bound`／`auto_approved`。
 7. 撞名時建立 `pending` 申請；同一個 LINE subject 的未過期申請會被重用，管理員在 `minichi_admin_system/identity-bindings` 處理。
-8. 後續自動結帳訊息流程以已綁定的 active LINE identity 為基礎實作。
+8. 綁定成功或重複登入的 `bound` 結果頁引導客人複製「已完成綁定」，回到 `@903jhmgb` 官方 LINE 聊天室傳送；聊天室連結會預填文字，仍須客人手動傳送。此步驟只調整頁面引導，不新增資料庫綁定狀態或改變 pending 審核。
+9. 後續自動結帳訊息流程以已綁定的 active LINE identity 為基礎實作。
 
 綁定成功後，資料庫 trigger 會在同一個 transaction 寫入
 `integration.line_binding_admin_email_outbox`；公開 LINE Login 服務不持有 Email
@@ -44,7 +45,7 @@ outbox，寄送一封通知到管理員 Gmail，並記錄重試／失敗狀態�
 | --- | --- |
 | `/` | 導向 `/line-register` |
 | `/line-register` | 客人閱讀購前說明、填寫社群名稱並開始 LINE Login |
-| `/line-register/result` | 顯示已綁定、待審核或錯誤結果 |
+| `/line-register/result` | 綁定成功時引導回官方 LINE 傳送訊息；其餘顯示待審核或錯誤結果 |
 | `POST /api/line-login/start` | 建立 OAuth transaction 並導向 LINE |
 | `GET /api/line-login/callback` | 處理 LINE callback 並依社群暱稱結果自動綁定或建立待審核申請 |
 | `POST /api/line-binding-requests` | 給其他受控入口使用的 ID token 綁定 API |
