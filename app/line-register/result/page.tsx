@@ -34,7 +34,7 @@ export default async function LineRegisterResultPage({ searchParams }: {
   const { result = "callback_failed" } = await searchParams;
 
   if (result === "bound") {
-    const chatUrl = `https://line.me/R/oaMessage/${encodeURIComponent("@903jhmgb")}/?${encodeURIComponent("已完成綁定")}`;
+    const chatUrl = "https://line.me/R/ti/p/@903jhmgb";
 
     return (
       <main className="page-enter flex min-h-svh items-center justify-center bg-white px-4 py-8 sm:px-6 sm:py-12">

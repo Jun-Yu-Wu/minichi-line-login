@@ -31,7 +31,7 @@
 5. 驗證成功後，RPC 只用客人輸入的社群暱稱比對目前有效的 `line_community_name`；LINE display name 不參與比對。
 6. 無同名時，RPC 同交易建立顧客、唯一 current community alias、active LINE identity，並回傳 `bound`／`auto_approved`。
 7. 撞名時建立 `pending` 申請；同一個 LINE subject 的未過期申請會被重用，管理員在 `minichi_admin_system/identity-bindings` 處理。
-8. 綁定成功或重複登入的 `bound` 結果頁引導客人複製「已完成綁定」，回到 `@903jhmgb` 官方 LINE 聊天室傳送；聊天室連結會預填文字，仍須客人手動傳送。此步驟只調整頁面引導，不新增資料庫綁定狀態或改變 pending 審核。
+8. 綁定成功或重複登入的 `bound` 結果頁引導客人複製「已完成綁定」，透過使用者指定的 `https://line.me/R/ti/p/@903jhmgb` 連結回到官方 LINE，貼上文字並手動傳送。此步驟只調整頁面引導，不新增資料庫綁定狀態或改變 pending 審核。
 9. 後續自動結帳訊息流程以已綁定的 active LINE identity 為基礎實作。
 
 綁定成功後，資料庫 trigger 會在同一個 transaction 寫入
