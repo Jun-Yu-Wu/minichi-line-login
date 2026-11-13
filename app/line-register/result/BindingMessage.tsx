@@ -27,7 +27,7 @@ export default function BindingMessage() {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted px-3 py-5 sm:px-5">
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted px-3 py-5 sm:px-5">
       <span ref={messageRef} className="select-all min-w-0 break-words text-[22px] font-semibold leading-9 text-foreground sm:text-2xl">
         {BINDING_MESSAGE}
       </span>
@@ -42,13 +42,13 @@ export default function BindingMessage() {
         ) : (
           <Copy className="hidden sm:block" aria-hidden="true" />
         )}
-        {copyState === "copied" ? "已複製" : copyState === "manual" ? "長按複製" : "複製文字"}
+        {copyState === "copied" ? "已複製" : copyState === "manual" ? "手動複製" : "複製文字"}
       </Button>
       <span className="sr-only" role="status" aria-live="polite">
         {copyState === "copied"
           ? `已複製「${BINDING_MESSAGE}」。`
           : copyState === "manual"
-            ? `請長按已選取的文字並複製，或直接在官方 LINE 聊天室輸入「${BINDING_MESSAGE}」。`
+            ? `請選取文字複製，或直接在官方 LINE 聊天室輸入「${BINDING_MESSAGE}」。`
             : ""}
       </span>
     </div>

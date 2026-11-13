@@ -10,8 +10,8 @@ import LineLoginForm from "./LineLoginForm";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  description: "使用 LINE Login 連結小日辰顧客身分。",
-  title: "小日辰 LINE 官方綁定｜MINICHI",
+  description: "使用 LINE 連結小日辰會員身分。",
+  title: "小日辰會員綁定｜MINICHI",
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -35,34 +35,27 @@ export default async function LineRegisterPage({ searchParams }: {
     <div className="min-h-svh bg-background">
       <header className="border-b border-border bg-white">
         <div className="mx-auto flex h-16 w-full max-w-[70rem] items-center px-4 sm:px-6">
-          <Link className="text-sm font-semibold text-foreground" href="/line-register">
-            小日辰 <span className="font-normal text-muted-foreground">MINICHI</span>
+          <Link className="flex min-h-11 items-center gap-2 text-sm font-semibold text-foreground" href="/line-register">
+            <span>小日辰</span>
+            <span className="text-xs font-normal tracking-[0.08em] text-muted-foreground">MINICHI</span>
           </Link>
         </div>
       </header>
 
-      <main className="page-enter grid min-h-[calc(100svh-4rem)] place-items-center px-4 py-8 sm:px-6 sm:py-12">
-        <Card className="w-full max-w-[35rem] gap-0 rounded-2xl border-border bg-card px-6 py-6 shadow-none sm:px-8 sm:py-8">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">會員註冊</p>
-            <h1 className="mt-2">開始會員綁定</h1>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              請輸入你在小日辰社群中的暱稱。
-            </p>
-          </div>
+      <main className="page-enter grid min-h-[calc(100svh-4rem)] place-items-center px-4 py-10 sm:px-6 sm:py-14">
+        <Card className="w-full max-w-[35rem] gap-0 rounded-2xl border-border bg-card px-6 py-8 shadow-none sm:px-9 sm:py-10">
+          <h1 className="text-2xl font-semibold leading-[1.3] text-foreground sm:text-[28px]">
+            開始會員綁定
+          </h1>
 
           {message || !configured ? (
-            <Alert className="mt-6 border-destructive/25 bg-destructive/5 text-foreground [&>svg]:text-destructive" variant="default">
+            <Alert className="mt-6 rounded-lg" variant="destructive">
               <AlertCircle className="size-4" aria-hidden="true" />
               <AlertDescription>{message || ERROR_MESSAGES.not_configured}</AlertDescription>
             </Alert>
           ) : null}
 
           <LineLoginForm configured={configured} />
-
-          <p className="mt-4 border-t border-border pt-4 text-sm leading-6 text-muted-foreground">
-            完成購前說明後，會前往 LINE 官方頁面登入。
-          </p>
         </Card>
       </main>
     </div>

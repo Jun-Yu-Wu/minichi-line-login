@@ -85,6 +85,19 @@
     background: var(--muted);
     color: var(--foreground);
   }
+
+  dialog.purchase-notice-dialog:not([open]) {
+    display: none;
+  }
+
+  dialog.purchase-notice-dialog::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+
+  .purchase-notice-scroll {
+    scrollbar-color: var(--muted-foreground) var(--muted);
+    scrollbar-width: thin;
+  }
 }
 
 @layer components {
