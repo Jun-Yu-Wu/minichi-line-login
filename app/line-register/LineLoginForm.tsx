@@ -4,9 +4,6 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 
 import {
   ArrowRight,
-  Check,
-  FileText,
-  LockKeyhole,
   X,
 } from "lucide-react";
 
@@ -15,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LineLoginForm({ configured }: { configured: boolean }) {
+  const [csrfToken, setCsrfToken] = useState("");
+  const [csrfUnavailable, setCsrfUnavailable] = useState(false);
   const [isNoticeOpen, setIsNoticeOpen] = useState(false);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
   const [hasAcceptedNotice, setHasAcceptedNotice] = useState(false);
@@ -25,6 +24,28 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
   const noticeTriggerRef = useRef<HTMLButtonElement>(null);
   const wasNoticeOpenRef = useRef(false);
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (!configured) return;
+    const controller = new AbortController();
+    fetch("/api/line-login/start-token", {
+      cache: "no-store",
+      credentials: "same-origin",
+      method: "POST",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("token_unavailable");
+        const payload = await response.json() as { csrfToken?: unknown };
+        if (typeof payload.csrfToken !== "string") throw new Error("token_unavailable");
+        setCsrfToken(payload.csrfToken);
+        setCsrfUnavailable(false);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCsrfUnavailable(true);
+      });
+    return () => controller.abort();
+  }, [configured]);
 
   useEffect(() => {
     if (!isNoticeOpen) return;
@@ -92,6 +113,7 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
     if (
       !configured
       || submittingRef.current
+      || !csrfToken
       || !hasReachedEnd
       || !hasAcceptedNotice
     ) {
@@ -106,20 +128,19 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
     <form
       action="/api/line-login/start"
       aria-busy={isSubmitting}
-      className="mt-7 grid gap-4 lg:mt-5 lg:gap-5"
+      className="mt-6 grid gap-4"
       ref={formRef}
       method="post"
       onSubmit={handleSubmit}
     >
       <div className="grid gap-2.5">
-        <Label className="sr-only text-sm font-medium text-ink lg:not-sr-only lg:flex lg:justify-between" htmlFor="claimedAlias">
-          <span>小日辰 LINE 社群中的暱稱</span>
-          <span className="font-mono text-[10px] font-normal tracking-[0.08em] text-ink/45">必填</span>
+        <Label className="text-sm font-medium text-foreground" htmlFor="claimedAlias">
+          社群暱稱
         </Label>
         <Input
           aria-describedby="claimedAlias-help"
           autoComplete="nickname"
-          className="h-[3.25rem] rounded-xl border-blue/35 bg-white px-4 text-base text-ink shadow-[0_2px_0_0_var(--ice)] placeholder:text-ink/35 focus-visible:border-blue focus-visible:ring-4 focus-visible:ring-sky/25 lg:h-14"
+          className="h-12 rounded-lg border-input bg-white px-3.5 text-base text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
           id="claimedAlias"
           maxLength={20}
           name="claimedAlias"
@@ -134,44 +155,41 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
         type="hidden"
         value={hasAcceptedNotice ? "accepted" : ""}
       />
+      <input name="csrfToken" type="hidden" value={csrfToken} />
+      {csrfUnavailable ? (
+        <p className="text-sm text-destructive" role="status">
+          目前無法建立安全登入，請重新整理頁面或稍後再試。
+        </p>
+      ) : null}
       <Button
-        className="min-h-[3.25rem] w-full rounded-xl bg-blue px-5 text-[0.95rem] font-semibold text-white shadow-[0_14px_28px_-18px_var(--ink)] transition-[background-color,transform,box-shadow] duration-200 hover:bg-ink hover:shadow-[0_16px_30px_-18px_var(--ink)] active:translate-y-px focus-visible:ring-4 focus-visible:ring-sky/30 disabled:bg-ink/20 disabled:text-ink/45 disabled:shadow-none lg:min-h-14"
+        className="min-h-12 w-full rounded-lg bg-primary px-5 text-base font-medium text-primary-foreground shadow-none hover:bg-[#333333] active:bg-[#111111] focus-visible:ring-2 focus-visible:ring-ring disabled:bg-muted disabled:text-muted-foreground"
         disabled={!configured || isSubmitting}
         onClick={handleOpenNotice}
         ref={noticeTriggerRef}
         type="button"
-      >
-        <FileText className="size-4" aria-hidden="true" />
+    >
         <span>{hasAcceptedNotice ? "前往 LINE 官方登入" : "閱讀購前說明並繼續"}</span>
         <ArrowRight aria-hidden="true" />
       </Button>
 
       {isNoticeOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-5">
-          <div aria-hidden="true" className="absolute inset-0 bg-ink/60 backdrop-blur-[3px]" />
+          <div aria-hidden="true" className="absolute inset-0 bg-black/40" />
           <div
             aria-labelledby="purchase-notice-title"
             aria-modal="true"
-            className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[1.75rem] border border-ink/10 bg-white shadow-[0_28px_80px_-28px_var(--ink)] outline-none sm:max-w-[40rem] sm:rounded-[1.75rem]"
+            className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-white shadow-[0_8px_24px_rgb(0_0_0_/_10%)] outline-none sm:max-w-[40rem] sm:rounded-2xl"
             ref={dialogRef}
             role="dialog"
             tabIndex={-1}
           >
-            <header className="flex shrink-0 items-start justify-between gap-5 border-b border-ink/10 px-5 pb-4 pt-5 sm:px-7 sm:pb-5 sm:pt-6">
-              <div>
-                <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-blue">
-                  <span className="grid size-5 place-items-center rounded-md bg-cyan/70 text-ink">
-                    <FileText className="size-3" aria-hidden="true" />
-                  </span>
-                  Before you continue
-                </div>
-                <h2 className="display-type mt-3 text-[1.55rem] font-semibold leading-tight tracking-[-0.045em] text-ink sm:text-[1.8rem]" id="purchase-notice-title">
-                  開始綁定前，請先閱讀購前說明
-                </h2>
-              </div>
+            <header className="flex shrink-0 items-start justify-between gap-5 border-b border-border px-5 py-4 sm:px-7 sm:py-5">
+              <h2 className="text-xl font-semibold leading-7 text-foreground sm:text-2xl" id="purchase-notice-title">
+                開始綁定前，請先閱讀購前說明
+              </h2>
               <button
                 aria-label="關閉購前說明"
-                className="grid size-10 shrink-0 place-items-center rounded-xl text-ink/55 transition-colors hover:bg-ice/70 hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky/30"
+                className="grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={closeNotice}
                 type="button"
               >
@@ -181,14 +199,14 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
 
             <div
               aria-label="購前說明內容"
-              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-sky/25 sm:px-7 sm:py-6"
+              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 text-muted-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-7 sm:py-6"
               onScroll={handleNoticeScroll}
               ref={noticeScrollRef}
               role="region"
               tabIndex={0}
             >
-              <div className="grid gap-7 pb-3 text-[13px] leading-6 text-ink/75 sm:text-sm sm:leading-7">
-                <p className="display-type border-b border-ink/10 pb-5 text-lg font-semibold tracking-[-0.03em] text-ink sm:text-xl">
+              <div className="grid gap-7 pb-3 text-[13px] leading-6 sm:text-sm sm:leading-7">
+                <p className="border-b border-border pb-5 text-lg font-semibold text-foreground sm:text-xl">
                   【小日辰購前說明】
                 </p>
 
@@ -197,10 +215,10 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
                     <p><span className="mr-2">1️⃣</span>閱讀以下內容即同意本社群之規定</p>
                     <p>
                       <span className="mr-2">2️⃣</span>
-                      加入官方 LINE 進行綁定：<span className="font-mono font-semibold tracking-[0.04em] text-blue">@903jhmgb</span>（有 @）
+                      加入官方 LINE 進行綁定：<span className="font-mono font-semibold tracking-[0.04em] text-foreground">@903jhmgb</span>（有 @）
                     </p>
                   </div>
-                  <p className="mt-4 rounded-xl border border-blue/15 bg-cyan/25 px-3.5 py-3 font-semibold text-ink">
+                  <p className="mt-4 rounded-lg border border-border bg-muted px-3.5 py-3 font-semibold text-foreground">
                     💡 未綁定者不得喊單！
                   </p>
                 </NoticeGroup>
@@ -218,7 +236,7 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
                     <p><span className="mr-2">1️⃣</span>以「台幣」直接報價！</p>
                     <div>
                       <p><span className="mr-2">2️⃣</span>結帳方法（滿 1000 元才需要匯款）</p>
-                      <div className="mt-2 grid gap-1.5 text-ink/65">
+                      <div className="mt-2 grid gap-1.5">
                         <p>🍵 親飛連線 ➡️ 每日結單</p>
                         <p>小幫手連線 &amp; 預購 ➡️ 每週結帳</p>
                       </div>
@@ -228,8 +246,8 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
                       <p>☁️ 匯款完成後請主動告知「金額 + 帳號後五碼」</p>
                     </div>
                     <div>
-                      <p className="font-semibold text-ink">💡 集點卡</p>
-                      <div className="mt-2 grid gap-1.5 text-ink/65">
+                      <p className="font-semibold text-foreground">💡 集點卡</p>
+                      <div className="mt-2 grid gap-1.5">
                         <p>💡 單日結帳金額需大於面值金額方可使用</p>
                         <p>💡 一日只能使用一張</p>
                         <p>💡 除親飛連線外，其他商品一律不適用集點活動</p>
@@ -241,7 +259,7 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
 
                 <NoticeGroup title="｜出貨、退換貨 & 其他">
                   <div className="grid gap-4">
-                    <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3.5 py-3 text-ink/75">
+                    <div className="rounded-lg border border-destructive/25 bg-destructive/5 px-3.5 py-3">
                       <p className="font-semibold text-destructive">1️⃣ 拜託千萬不要棄單不領貨⋯哭 😣</p>
                       <p className="mt-2">若有急單或保留單等可私訊官方帳號討論～</p>
                       <p className="mt-2 border-t border-destructive/15 pt-2">— 配送方式：7-11 賣貨便，運費 38 元</p>
@@ -258,36 +276,35 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
                   </div>
                 </NoticeGroup>
 
-                <div className="text-ink/75">
+                <div>
                   <p>以上！若有未盡事宜以我方為主</p>
                   <p className="mt-1">也歡迎大家私訊官方詢問～</p>
-                  <p className="mt-3 font-semibold text-ink">㊗️ 大家購物愉快！</p>
-                  <p className="mt-3 font-mono text-[10px] tracking-[0.08em] text-ink/50">更新：115.05.17</p>
+                  <p className="mt-3 font-semibold text-foreground">㊗️ 大家購物愉快！</p>
+                  <p className="mt-3 text-[11px] text-muted-foreground">更新：115.05.17</p>
                 </div>
 
-                <div className="flex items-start gap-3 text-ink/70">
-                  <LockKeyhole className="mt-1 size-4 shrink-0 text-blue" aria-hidden="true" />
-                  <p className="text-[12px] leading-5 text-ink/70 sm:text-[13px] sm:leading-6">
+                <div className="border-t border-border pt-4">
+                  <p className="text-[12px] leading-5 sm:text-[13px] sm:leading-6">
                     讀完後，請勾選「我已閱讀並同意上述購前說明」。完成同意後，才會前往 LINE 官方登入頁面。
                   </p>
                 </div>
               </div>
             </div>
 
-            <footer className="shrink-0 border-t border-ink/10 bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-7 sm:pb-5 sm:pt-5">
-              <label className={`flex min-h-12 items-start gap-3 rounded-xl border px-3.5 py-3 text-[13px] leading-5 transition-colors sm:text-sm ${hasReachedEnd ? "border-blue/25 bg-cyan/20 text-ink" : "border-ink/10 bg-ink/[0.03] text-ink/40"}`}>
+            <footer className="shrink-0 border-t border-border bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 sm:px-7 sm:pb-5 sm:pt-5">
+              <label className={`flex min-h-12 items-start gap-3 rounded-lg border px-3.5 py-3 text-[13px] leading-5 transition-colors sm:text-sm ${hasReachedEnd ? "border-input bg-white text-foreground" : "border-border bg-muted text-muted-foreground"}`}>
                 <input
                   checked={hasAcceptedNotice}
-                  className="mt-0.5 size-4 shrink-0 accent-[var(--blue)] disabled:cursor-not-allowed"
+                  className="mt-0.5 size-4 shrink-0 accent-[#202020] disabled:cursor-not-allowed"
                   disabled={!hasReachedEnd || isSubmitting}
                   onChange={(event) => setHasAcceptedNotice(event.target.checked)}
                   type="checkbox"
                 />
-                <span>我已閱讀並同意上述購前說明</span>
+                <span>{hasReachedEnd ? "我已閱讀並同意上述購前說明" : "請先滑到說明底部，再勾選同意"}</span>
               </label>
               <div className="mt-3 grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-3">
                 <Button
-                  className="order-2 min-h-12 rounded-xl px-4 text-sm font-medium text-ink/65 hover:bg-ice/60 hover:text-ink focus-visible:ring-4 focus-visible:ring-sky/30 sm:order-1"
+                  className="order-2 min-h-12 rounded-lg px-4 text-sm font-medium text-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:order-1"
                   onClick={closeNotice}
                   type="button"
                   variant="ghost"
@@ -295,12 +312,12 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
                   返回修改
                 </Button>
                 <Button
-                  className="order-1 min-h-12 rounded-xl bg-blue px-5 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_var(--ink)] transition-[background-color,transform,box-shadow] duration-200 hover:bg-ink hover:shadow-[0_16px_30px_-18px_var(--ink)] active:translate-y-px focus-visible:ring-4 focus-visible:ring-sky/30 disabled:bg-ink/15 disabled:text-ink/35 disabled:shadow-none sm:order-2"
-                  disabled={!configured || isSubmitting || !hasReachedEnd || !hasAcceptedNotice}
+                  className="order-1 min-h-12 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-none hover:bg-[#333333] active:bg-[#111111] focus-visible:ring-2 focus-visible:ring-ring disabled:bg-muted disabled:text-muted-foreground sm:order-2"
+                  disabled={!configured || !csrfToken || isSubmitting || !hasReachedEnd || !hasAcceptedNotice}
                   type="submit"
                 >
                   <span>{isSubmitting ? "正在前往 LINE…" : "同意並前往 LINE"}</span>
-                  {isSubmitting ? <Check className="size-4" aria-hidden="true" /> : <ArrowRight className="size-4" aria-hidden="true" />}
+                  <ArrowRight className="size-4" aria-hidden="true" />
                 </Button>
               </div>
             </footer>
@@ -317,7 +334,7 @@ function NoticeGroup({ title, children }: {
 }) {
   return (
     <section className="grid gap-2.5">
-      <h3 className="border-l-2 border-blue/55 pl-3 text-sm font-semibold leading-6 text-ink sm:text-[15px]">{title}</h3>
+      <h3 className="border-l-2 border-foreground pl-3 text-sm font-semibold leading-6 text-foreground sm:text-[15px]">{title}</h3>
       <div>{children}</div>
     </section>
   );

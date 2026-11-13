@@ -31,7 +31,7 @@
 5. 驗證成功後，RPC 只用客人輸入的社群暱稱比對目前有效的 `line_community_name`；LINE display name 不參與比對。
 6. 無同名時，RPC 同交易建立顧客、唯一 current community alias、active LINE identity，並回傳 `bound`／`auto_approved`。
 7. 撞名時建立 `pending` 申請；同一個 LINE subject 的未過期申請會被重用，管理員在 `minichi_admin_system/identity-bindings` 處理。
-8. 綁定成功或重複登入的 `bound` 結果頁引導客人複製「已完成綁定」，透過使用者指定的 `https://line.me/R/ti/p/@903jhmgb` 連結回到官方 LINE，貼上文字並手動傳送。此步驟只調整頁面引導，不新增資料庫綁定狀態或改變 pending 審核。
+8. 綁定成功或重複登入的 `bound` 結果頁使用 LINE 官方 `oaMessage` URL 開啟官方聊天室並預填「已完成綁定」，由客人手動送出；複製按鈕保留作為 LINE 未帶入文字時的備援。此步驟不新增資料庫綁定狀態或改變 pending 審核。
 9. 後續自動結帳訊息流程以已綁定的 active LINE identity 為基礎實作。
 
 綁定成功後，資料庫 trigger 會在同一個 transaction 寫入
@@ -45,7 +45,8 @@ outbox，寄送一封通知到管理員 Gmail，並記錄重試／失敗狀態�
 | --- | --- |
 | `/` | 導向 `/line-register` |
 | `/line-register` | 客人閱讀購前說明、填寫社群名稱並開始 LINE Login |
-| `/line-register/result` | 綁定成功時引導回官方 LINE 傳送訊息；其餘顯示待審核或錯誤結果 |
+| `/line-register/result` | 綁定成功時開啟預填「已完成綁定」的官方 LINE 聊天室；其餘顯示待審核或錯誤結果 |
+| `POST /api/line-login/start-token` | 建立短期一次性 CSRF token；只接受同源、空 body 請求 |
 | `POST /api/line-login/start` | 建立 OAuth transaction 並導向 LINE |
 | `GET /api/line-login/callback` | 處理 LINE callback 並依社群暱稱結果自動綁定或建立待審核申請 |
 | `POST /api/line-binding-requests` | 給其他受控入口使用的 ID token 綁定 API |
@@ -59,10 +60,13 @@ outbox，寄送一封通知到管理員 Gmail，並記錄重試／失敗狀態�
 
 在正式環境前，仍要由資料庫 migration／權限設定明確落實以下限制：
 
-- 將 `minichi_admin_system/supabase/migrations/0020_line_login_ingress_rpc.sql` 與
-  `0021_line_login_auto_approval.sql` 按順序套用到同一個資料庫。
+- 確認管理員 migration chain 已依序套用至 `0062`，再套用
+  `minichi_admin_system/supabase/migrations/0063_line_login_public_request_security.sql`。
 - 只對公開資料庫 role 授予 `private` schema 的 `USAGE`，以及
   `private.submit_line_binding_request(text, text, text, text, text, integer)` 的 `EXECUTE`。
+- Migration `0063` 會額外授予專用 `minichi_line_login_app`／`line_login_ingress` role
+  三個限權 request-security RPC；不授予限流或 CSRF table 權限，也不授予 Supabase
+  `anon`／`authenticated` role。
 - 由該 `SECURITY DEFINER` RPC 在資料庫內完成 subject idempotency、pending reuse／expiry、目前社群暱稱撞名判斷、無撞名自動建立與 requested／customer_created／auto_approved audit；公開 role 不直接讀寫任何 business table。
 - 拒絕 `main.customers`、`main.customer_aliases`、訂單、付款與管理員資料的讀取或寫入。
 - 部署前確認 RPC owner、`search_path = pg_catalog`、RLS 與 execute grant；不要用 `BYPASSRLS` 或管理員 role 代替。
@@ -75,7 +79,19 @@ grant usage on schema private to minichi_line_login_app;
 grant execute on function private.submit_line_binding_request(
   text, text, text, text, text, integer
 ) to minichi_line_login_app;
+
+grant execute on function private.consume_line_login_rate_limit(text, text),
+  private.issue_line_login_start_token(text, text),
+  private.consume_line_login_start_token(text)
+to minichi_line_login_app;
 ```
+
+LINE Login 起始 POST 只接受設定 callback 網域的同源請求，並消耗五分鐘有效、僅能
+使用一次的 CSRF token。兩個公開 POST 端點都限制實際讀取的 body bytes；共享資料庫
+限流為起始登入每 IP 每 10 分鐘 10 次、綁定 API 每 IP 每 10 分鐘 10 次、每個 LINE
+subject 每小時 3 次。限流只存 HMAC 雜湊，不保存 IP 或 LINE subject 原文。正式環境
+目前使用 Vercel 提供的 `x-vercel-forwarded-for` 作為客戶 IP；若改用其他 hosting，需
+先替換並驗證 `src/server/public-request-security.js` 的受信任 proxy adapter。
 
 ## 本機指令
 

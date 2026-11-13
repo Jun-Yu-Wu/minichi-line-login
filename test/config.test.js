@@ -20,14 +20,16 @@ function withEnvironment(values, callback) {
   }
 }
 
-test("LINE ingress requires the dedicated database URL and channel id", () => {
+test("LINE ingress requires the dedicated database URL, channel id, and secret", () => {
   withEnvironment({
     MINICHI_LINE_LOGIN_CHANNEL_ID: "channel_123",
+    MINICHI_LINE_LOGIN_CHANNEL_SECRET: "secret_123",
     MINICHI_LINE_LOGIN_DB_URL: "postgres://line_login_ingress:secret@db.example/postgres",
   }, () => {
     assert.equal(config.isLineBindingIngressConfigured(), true);
     assert.deepEqual(config.lineBindingIngressConfig(), {
       channelId: "channel_123",
+      channelSecret: "secret_123",
       requestTtlMinutes: 1440,
       verificationTimeoutMs: 5000,
     });
@@ -74,6 +76,33 @@ test("database config is isolated from the administrator database variable", () 
   });
 });
 
+test("LINE database TLS verifies certificates even if legacy settings try to disable it", () => {
+  withEnvironment({
+    MINICHI_LINE_LOGIN_DB_URL: "postgres://line_login_ingress:secret@db.example/postgres?sslmode=no-verify&ssl=false",
+    MINICHI_LINE_LOGIN_DB_SSL: "false",
+    MINICHI_LINE_LOGIN_DB_CA_PEM: undefined,
+  }, () => {
+    const value = config.databaseConfig();
+    const connectionUrl = new URL(value.connectionString);
+
+    assert.deepEqual(value.ssl, { rejectUnauthorized: true });
+    assert.equal(connectionUrl.searchParams.has("sslmode"), false);
+    assert.equal(connectionUrl.searchParams.has("ssl"), false);
+  });
+});
+
+test("LINE database config accepts the Supabase root certificate without disabling verification", () => {
+  withEnvironment({
+    MINICHI_LINE_LOGIN_DB_URL: "postgres://line_login_ingress:secret@db.example/postgres",
+    MINICHI_LINE_LOGIN_DB_CA_PEM: "-----BEGIN CERTIFICATE-----\nexample-root\n-----END CERTIFICATE-----",
+  }, () => {
+    assert.deepEqual(config.databaseConfig().ssl, {
+      rejectUnauthorized: true,
+      ca: "-----BEGIN CERTIFICATE-----\nexample-root\n-----END CERTIFICATE-----",
+    });
+  });
+});
+
 test("placeholder .env values are reported as not configured", () => {
   withEnvironment({
     MINICHI_LINE_LOGIN_CHANNEL_ID: "replace_with_line_login_channel_id",
@@ -82,5 +111,16 @@ test("placeholder .env values are reported as not configured", () => {
   }, () => {
     assert.equal(config.isLineBindingIngressConfigured(), false);
     assert.equal(config.isLineLoginWebConfigured(), false);
+  });
+});
+
+test("LINE binding ingress requires its channel secret for keyed abuse controls", () => {
+  withEnvironment({
+    MINICHI_LINE_LOGIN_CHANNEL_ID: "channel_123",
+    MINICHI_LINE_LOGIN_CHANNEL_SECRET: undefined,
+    MINICHI_LINE_LOGIN_DB_URL: "postgres://line_login_ingress:secret@db.example/postgres",
+  }, () => {
+    assert.equal(config.isLineBindingIngressConfigured(), false);
+    assert.throws(() => config.lineBindingIngressConfig(), /CHANNEL_SECRET is required/);
   });
 });

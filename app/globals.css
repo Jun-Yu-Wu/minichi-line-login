@@ -35,30 +35,30 @@
 }
 
 :root {
-  --radius: 1rem;
-  --ink: #133c55;
-  --blue: #386fa4;
-  --sky: #59a5d8;
-  --cyan: #84d2f6;
-  --ice: #91e5f6;
-  --background: var(--ice);
-  --foreground: var(--ink);
+  --radius: 0.5rem;
+  --ink: #202020;
+  --blue: #202020;
+  --sky: #f6f6f6;
+  --cyan: #f6f6f6;
+  --ice: #ffffff;
+  --background: #ffffff;
+  --foreground: #202020;
   --card: #ffffff;
-  --card-foreground: var(--ink);
+  --card-foreground: #202020;
   --popover: #ffffff;
-  --popover-foreground: var(--ink);
-  --primary: var(--blue);
+  --popover-foreground: #202020;
+  --primary: #202020;
   --primary-foreground: #ffffff;
-  --secondary: var(--cyan);
-  --secondary-foreground: var(--ink);
-  --muted: #f2fbfe;
-  --muted-foreground: var(--blue);
-  --accent: var(--sky);
-  --accent-foreground: var(--ink);
-  --destructive: #a44252;
-  --border: var(--cyan);
-  --input: var(--cyan);
-  --ring: var(--sky);
+  --secondary: #f6f6f6;
+  --secondary-foreground: #202020;
+  --muted: #f6f6f6;
+  --muted-foreground: #646464;
+  --accent: #f6f6f6;
+  --accent-foreground: #202020;
+  --destructive: #b91c1c;
+  --border: #eaeaea;
+  --input: #8a8a8a;
+  --ring: #202020;
   --font-sans-family: "Noto Sans TC", "PingFang TC", ui-sans-serif, system-ui, sans-serif;
   --font-display-family: "Noto Serif TC", "Songti TC", Georgia, serif;
   --font-mono-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
@@ -75,11 +75,6 @@
 
   body {
     @apply min-h-svh bg-background font-sans text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at 92% -4%, var(--cyan) 0, transparent 31rem),
-      radial-gradient(circle at -8% 88%, var(--sky) 0, transparent 28rem),
-      linear-gradient(135deg, var(--ice) 0%, #ffffff 58%, var(--cyan) 125%);
-    background-attachment: fixed;
   }
 
   button:not(:disabled) {
@@ -87,16 +82,12 @@
   }
 
   ::selection {
-    background: var(--sky);
-    color: var(--ink);
+    background: var(--muted);
+    color: var(--foreground);
   }
 }
 
 @layer components {
-  .display-type {
-    font-family: var(--font-display);
-  }
-
   .page-enter {
     opacity: 1;
     transform: none;
@@ -105,11 +96,11 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .page-enter {
-    animation: page-in 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: page-in 150ms ease-out both;
   }
 }
 
 @keyframes page-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
