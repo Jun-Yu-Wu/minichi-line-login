@@ -9,39 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LineLoginForm({ configured }: { configured: boolean }) {
-  const [csrfToken, setCsrfToken] = useState("");
-  const [csrfUnavailable, setCsrfUnavailable] = useState(false);
   const [isNoticeOpen, setIsNoticeOpen] = useState(false);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
   const [hasAcceptedNotice, setHasAcceptedNotice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitUnavailable, setSubmitUnavailable] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const noticeScrollRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const noticeTriggerRef = useRef<HTMLButtonElement>(null);
   const submittingRef = useRef(false);
-
-  useEffect(() => {
-    if (!configured) return;
-    const controller = new AbortController();
-    fetch("/api/line-login/start-token", {
-      cache: "no-store",
-      credentials: "same-origin",
-      method: "POST",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("token_unavailable");
-        const payload = await response.json() as { csrfToken?: unknown };
-        if (typeof payload.csrfToken !== "string") throw new Error("token_unavailable");
-        setCsrfToken(payload.csrfToken);
-        setCsrfUnavailable(false);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setCsrfUnavailable(true);
-      });
-    return () => controller.abort();
-  }, [configured]);
 
   useEffect(() => {
     if (!isNoticeOpen) return;
@@ -71,6 +48,7 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
     if (!configured || isSubmitting) return;
     if (!formRef.current?.reportValidity()) return;
 
+    setSubmitUnavailable(false);
     setHasReachedEnd(false);
     setHasAcceptedNotice(false);
     setIsNoticeOpen(true);
@@ -86,18 +64,48 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (
       !configured
       || submittingRef.current
-      || !csrfToken
       || !hasReachedEnd
       || !hasAcceptedNotice
     ) {
-      event.preventDefault();
       return;
     }
+
+    const form = event.currentTarget;
     submittingRef.current = true;
     setIsSubmitting(true);
+    setSubmitUnavailable(false);
+
+    void fetch("/api/line-login/start-token", {
+      cache: "no-store",
+      credentials: "same-origin",
+      method: "POST",
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("token_unavailable");
+        const payload: unknown = await response.json();
+        if (
+          typeof payload !== "object"
+          || payload === null
+          || !("csrfToken" in payload)
+          || typeof payload.csrfToken !== "string"
+        ) {
+          throw new Error("token_unavailable");
+        }
+
+        const tokenInput = form.elements.namedItem("csrfToken");
+        if (!(tokenInput instanceof HTMLInputElement)) throw new Error("token_unavailable");
+        tokenInput.value = payload.csrfToken;
+        form.submit();
+      })
+      .catch(() => {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+        setSubmitUnavailable(true);
+      });
   }
 
   return (
@@ -133,12 +141,7 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
         type="hidden"
         value={hasAcceptedNotice ? "accepted" : ""}
       />
-      <input name="csrfToken" type="hidden" value={csrfToken} />
-      {csrfUnavailable ? (
-        <p className="text-sm leading-6 text-destructive" role="status">
-          目前無法建立安全登入，請重新整理頁面或稍後再試。
-        </p>
-      ) : null}
+      <input name="csrfToken" type="hidden" value="" readOnly />
       <Button
         className="min-h-12 w-full rounded-lg bg-primary px-5 text-base font-medium text-primary-foreground shadow-none hover:bg-[#333333] active:bg-[#111111] focus-visible:ring-2 focus-visible:ring-ring disabled:bg-muted disabled:text-muted-foreground"
         disabled={!configured || isSubmitting}
@@ -275,13 +278,18 @@ export default function LineLoginForm({ configured }: { configured: boolean }) {
               </Button>
               <Button
                 className="order-1 min-h-12 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-none hover:bg-[#333333] active:bg-[#111111] focus-visible:ring-2 focus-visible:ring-ring disabled:bg-muted disabled:text-muted-foreground sm:order-2"
-                disabled={!configured || !csrfToken || isSubmitting || !hasReachedEnd || !hasAcceptedNotice}
+                disabled={!configured || isSubmitting || !hasReachedEnd || !hasAcceptedNotice}
                 type="submit"
               >
                 <span>{isSubmitting ? "正在前往 LINE…" : "同意並前往 LINE"}</span>
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
             </div>
+            {submitUnavailable ? (
+              <p className="mt-3 text-sm leading-6 text-destructive" role="alert">
+                目前無法開始 LINE 登入，請稍後再試。
+              </p>
+            ) : null}
           </footer>
         </dialog>
       ) : null}
