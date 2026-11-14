@@ -31,7 +31,7 @@
 5. 驗證成功後，RPC 只用客人輸入的社群暱稱比對目前有效的 `line_community_name`；LINE display name 不參與比對。
 6. 無同名時，RPC 同交易建立顧客、唯一 current community alias、active LINE identity，並回傳 `bound`／`auto_approved`。
 7. 撞名時建立 `pending` 申請；同一個 LINE subject 的未過期申請會被重用，管理員在 `minichi_admin_system/identity-bindings` 處理。
-8. 綁定成功或重複登入的 `bound` 結果頁使用 LINE 官方 `oaMessage` URL 開啟官方聊天室並預填「已完成綁定」，由客人手動送出；複製按鈕保留作為 LINE 未帶入文字時的備援。此步驟不新增資料庫綁定狀態或改變 pending 審核。
+8. 首次綁定成功的 `bound` 結果頁使用 LINE 官方 `oaMessage` URL 預填「已完成綁定」，由客人手動送出；複製按鈕保留作為備援。同一個 LINE 身分再次登入會回傳 `already_bound`，顯示「您已經綁定過嘍～」，並提供官方 LINE 與小日辰會員中心入口，不再要求重送綁定訊息。撞名的 `pending` 申請由管理員在 `minichi_admin_system/identity-bindings` 處理。
 9. 後續自動結帳訊息流程以已綁定的 active LINE identity 為基礎實作。
 
 綁定成功後，資料庫 trigger 會在同一個 transaction 寫入
@@ -45,7 +45,7 @@ outbox，寄送一封通知到管理員 Gmail，並記錄重試／失敗狀態�
 | --- | --- |
 | `/` | 導向 `/line-register` |
 | `/line-register` | 客人閱讀購前說明、填寫社群名稱並開始 LINE Login |
-| `/line-register/result` | 綁定成功時開啟預填「已完成綁定」的官方 LINE 聊天室；其餘顯示待審核或錯誤結果 |
+| `/line-register/result` | 區分首次綁定成功、已綁定重入、待審核與錯誤；已綁定重入提供官方 LINE 與會員中心入口 |
 | `POST /api/line-login/start-token` | 建立短期一次性 CSRF token；只接受同源、空 body 請求 |
 | `POST /api/line-login/start` | 建立 OAuth transaction 並導向 LINE |
 | `GET /api/line-login/callback` | 處理 LINE callback 並依社群暱稱結果自動綁定或建立待審核申請 |

@@ -48,7 +48,10 @@ export async function GET(request: NextRequest) {
       providerScope: oauthConfig.channelId,
       providerSubject: verified.subject,
     });
-    return resultRedirect(request, result.status, secureCookie);
+    const resultCode = result.disposition === "already_bound"
+      ? "already_bound"
+      : result.status;
+    return resultRedirect(request, resultCode, secureCookie);
   } catch (error) {
     const code = classifyCallbackError(error);
     if (code === "callback_failed") {

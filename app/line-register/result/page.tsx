@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CircleAlert, Clock3, MessageCircle, RotateCcw } from "lucide-react";
+import { ArrowRight, CheckCircle2, CircleAlert, Clock3, MessageCircle, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,17 +32,26 @@ export default async function LineRegisterResultPage({ searchParams }: {
   searchParams: Promise<{ result?: string }>;
 }) {
   const { result = "callback_failed" } = await searchParams;
-  const success = RESULTS[result as keyof typeof RESULTS];
+  const success = result === "pending" ? RESULTS.pending : undefined;
+  const isAlreadyBound = result === "already_bound";
   const isBound = result === "bound";
-  const Icon = isBound ? MessageCircle : success?.icon || CircleAlert;
-  const title = isBound ? "最後一步" : success?.title || "尚未完成綁定";
-  const description = isBound
-    ? "開啟官方 LINE 聊天室，送出已填入的文字。"
-    : success?.description || ERROR_MESSAGES[result] || ERROR_MESSAGES.callback_failed;
-  const iconTone = isBound || success ? "text-foreground" : "text-destructive";
+  const Icon = isAlreadyBound
+    ? CheckCircle2
+    : isBound ? MessageCircle : success?.icon || CircleAlert;
+  const title = isAlreadyBound
+    ? "您已經綁定過嘍～"
+    : isBound ? "最後一步" : success?.title || "尚未完成綁定";
+  const description = isAlreadyBound
+    ? null
+    : isBound
+      ? "開啟官方 LINE 聊天室，送出已填入的文字。"
+      : success?.description || ERROR_MESSAGES[result] || ERROR_MESSAGES.callback_failed;
+  const iconTone = isAlreadyBound || isBound || success ? "text-foreground" : "text-destructive";
   const officialLineId = encodeURIComponent("@903jhmgb");
   const message = encodeURIComponent(BINDING_MESSAGE);
   const chatUrl = `https://line.me/R/oaMessage/${officialLineId}/?${message}`;
+  const officialLineProfileUrl = `https://line.me/R/ti/p/${officialLineId}`;
+  const memberCenterUrl = "https://minichi-customer-system.vercel.app/";
 
   return (
     <main className="page-enter grid min-h-svh place-items-center bg-background px-4 py-8 sm:px-6 sm:py-12">
@@ -51,9 +60,27 @@ export default async function LineRegisterResultPage({ searchParams }: {
           <Icon className={`size-8 shrink-0 stroke-[1.75] ${iconTone}`} aria-hidden="true" />
           <span>{title}</span>
         </h1>
-        <p className="mt-5 text-base leading-[1.7] text-muted-foreground">
-          {description}
-        </p>
+        {description ? (
+          <p className="mt-5 text-base leading-[1.7] text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+        {isAlreadyBound ? (
+          <div className="mt-8 grid gap-3">
+            <Button asChild className="h-auto min-h-14 w-full justify-between rounded-lg bg-primary px-4 py-4 text-base text-primary-foreground shadow-none hover:bg-[#333333] active:bg-[#111111] focus-visible:ring-2 focus-visible:ring-ring sm:px-5">
+              <a href={officialLineProfileUrl}>
+                開啟官方 LINE
+                <ArrowRight aria-hidden="true" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="min-h-12 w-full justify-between rounded-lg border-input px-4 text-base text-foreground shadow-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:px-5">
+              <a href={memberCenterUrl}>
+                開啟小日辰會員中心
+                <ArrowRight aria-hidden="true" />
+              </a>
+            </Button>
+          </div>
+        ) : null}
         {isBound ? (
           <>
             <BindingMessage />
@@ -65,7 +92,7 @@ export default async function LineRegisterResultPage({ searchParams }: {
             </Button>
           </>
         ) : null}
-        {!success && !isBound ? (
+        {!success && !isBound && !isAlreadyBound ? (
           <Button asChild className="mt-7 min-h-12 w-full rounded-lg bg-primary px-5 text-base text-primary-foreground shadow-none hover:bg-[#333333] active:bg-[#111111] focus-visible:ring-2 focus-visible:ring-ring">
             <Link href="/line-register">
               重新開始
